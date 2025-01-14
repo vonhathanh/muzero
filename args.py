@@ -47,7 +47,7 @@ class Args:
 
     # Fully Connected Network
     encoding_size: int = 8
-    num_hidden_layers: int = 16
+    hidden_layers_size: int = 16
 
     ### Training
     results_path: str = pathlib.Path(__file__).resolve().cwd() / "results" / datetime.datetime.now().strftime(
