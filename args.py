@@ -22,7 +22,7 @@ class Args:
     muzero_player: int = 0  # Turn Muzero begins to play (0: MuZero plays first, 1: MuZero plays second)
 
     ### Self-Play
-    num_workers: int = 1  # Number of simultaneous threads/workers self-playing to feed the replay buffer
+    num_workers: int = 4  # Number of simultaneous threads/workers self-playing to feed the replay buffer
     selfplay_on_gpu: bool = False
     max_moves: int = 500  # Maximum number of moves if game is not finished before
     num_simulations: int = 50  # Number of future moves self-simulated
