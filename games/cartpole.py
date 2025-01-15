@@ -11,6 +11,7 @@ class Game(AbstractGame):
     def __init__(self, seed=None):
         self.env = gym.make("CartPole-v1")
         self.seed = 0 if seed is None else seed
+        self.history = []
 
     def step(self, action):
         """
