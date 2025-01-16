@@ -1,11 +1,15 @@
+import math
+
 import tyro
 import torch
 import numpy as np
 import multiprocessing as mp
 
+from action_history import ActionHistory
 from args import Args
 from games.cartpole import Game
 from model import MLP
+from node import Node
 from replay_buffer import ReplayBuffer
 from shared_storage import SharedStorage
 
@@ -37,14 +41,32 @@ class Muzero:
         while not done and len(game.history) < self.args.max_moves:
             root = Node(0)
             observation, _ = game.reset()
-        #     self.expand_node(root, game.legal_actions(), model.initial_inference(observation))
-        #     self.add_exploration_noise(root)
-        #     self.run_mcts(root, game.history)
+            self.expand_node(root, game.legal_actions(), model.initial_inference(observation))
+            self.add_exploration_noise(root)
+            self.run_mcts(root, game.history, model)
         #     action = self.select_action(len(game.history), root, model)
         #     observation, done = game.step(action)
         #     game.store_statistics(root)
 
         return game
+
+    def run_mcts(self, root: Node, history: ActionHistory, model: MLP):
+
+
+    def expand_node(self, node: Node, legal_actions: list | tuple, model_output):
+        node.hidden_state = model_output.encoded_state
+        node.reward = model_output.reward
+        policy = {a: math.exp(model_output.policy_logits[a]) for a in legal_actions}
+        policy_sum = sum(policy.values())
+        for action, p in policy.items():
+            node.children[action] = Node(p / policy_sum)
+
+    def add_exploration_noise(self, node: Node):
+        actions = list(node.children.keys())
+        noise = np.random.dirichlet([self.args.root_dirichlet_alpha] * len(actions))
+        frac = self.args.root_exploration_fraction
+        for a, n in zip(actions, noise):
+            node.children[a].prior = node.children[a].prior * (1 - frac) + n * frac
 
     def launch_job(self, fn, *args):
         p = mp.Process(target=fn, args=args)
