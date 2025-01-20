@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from args import Args
@@ -9,11 +10,14 @@ class MLP(torch.nn.Module):
     def __init__(self, args: Args):
         super().__init__()
 
-        obs_shape = args.observation_shape  # shorten the name
-        self.representation_net = mlp(
-            obs_shape[0] * obs_shape[1] * obs_shape[2] * (args.stacked_observations + 1) + args.stacked_observations *
-            obs_shape[1] * obs_shape[2],
-            [],
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else
+            "mps" if torch.backends.mps.is_available() else
+            "cpu"
+        )
+
+        self.representation_net = mlp(np.array(args.observation_shape).prod(),
+            [args.hidden_layers_size],
             args.encoding_size)
 
         self.dynamics_encoded_state_net = mlp(args.encoding_size + len(args.action_space),
@@ -27,13 +31,18 @@ class MLP(torch.nn.Module):
 
         self.prediction_value_net = mlp(args.encoding_size, [args.hidden_layers_size], self.full_support_size)
 
+        if args.train_on_gpu:
+            self.dynamics_reward_net.to(self.device)
+            self.prediction_policy_net.to(self.device)
+            self.prediction_value_net.to(self.device)
+
     def prediction(self, encoded_state):
         policy_logits = self.prediction_policy_net(encoded_state)
         value = self.prediction_value_net(encoded_state)
         return policy_logits, value
 
     def representation(self, observation):
-        encoded_state = self.representation_net(observation.view(observation.shape[0], -1))
+        encoded_state = self.representation_net(observation)
         return self.scale_encoded_state(encoded_state)
 
     def dynamics(self, encoded_state, action):
