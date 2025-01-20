@@ -10,9 +10,8 @@ class Args:
     seed: int = 0  # Seed for numpy, torch and the game
 
     ### Game
-    # Dimensions of the game observation, must be 3D (channel, height, width).
-    # For a 1D array, please reshape it to (1, 1, length of array)
-    observation_shape: tuple = (1, 1, 4)
+    # Dimensions of the game observation, can be 3D (channel, height, width) or 2D (batch_size, features).
+    observation_shape: tuple = (1, 4)
     action_space: tuple = tuple(range(2))  # Fixed list of all possible actions. You should only edit the length
     players: tuple = tuple(range(1))  # List of players. You should only edit the length
     # Number of previous observations and previous actions to add to the current observation
@@ -57,7 +56,7 @@ class Args:
     checkpoint_interval: int = 10  # Number of training steps before using the model for self-playing
     # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25
     value_loss_weight: float = 1.0
-    train_on_gpu = torch.cuda.is_available()  # Train on GPU if available
+    train_on_gpu: bool = torch.cuda.is_available()  # Train on GPU if available
 
     optimizer: str = "Adam"  # "Adam" or "SGD". Paper uses SGD
     weight_decay: float = 1e-4  # L2 weights regularization
