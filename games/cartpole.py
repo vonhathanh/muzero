@@ -1,5 +1,5 @@
 import gymnasium as gym
-import numpy as np
+import torch
 from games.abstract_game import AbstractGame
 
 
@@ -24,7 +24,7 @@ class Game(AbstractGame):
             The new observation, the reward and a boolean if the game has ended.
         """
         observation, reward, terminated, truncated, _ = self.env.step(action)
-        return np.array([[observation]]), reward, terminated or truncated
+        return torch.tensor([observation]), reward, terminated or truncated
 
     def legal_actions(self):
         """
@@ -47,7 +47,7 @@ class Game(AbstractGame):
             Initial observation of the game.
         """
         observation, info = self.env.reset(seed=self.seed)
-        return np.array([[observation]])
+        return torch.tensor([observation])
 
     def close(self):
         """
