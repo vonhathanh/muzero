@@ -59,7 +59,7 @@ class Muzero:
         node.hidden_state = encoded_state
         node.reward = reward
 
-        policy = {a: math.exp(policy_logits[a]) for a in legal_actions}
+        policy = {a: math.exp(policy_logits[0, a]) for a in legal_actions}
         policy_sum = sum(policy.values())
 
         for action, p in policy.items():
