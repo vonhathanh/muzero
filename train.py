@@ -35,12 +35,12 @@ class Muzero:
             self.replay_buffer.save_game(game)
 
     def play_game(self, model: MLP):
-        game = Game(self.args)
+        game = Game(self.args.seed)
         done = False
 
         while not done and len(game.history) < self.args.max_moves:
             root = Node(0)
-            observation, _ = game.reset()
+            observation = game.reset()
             self.expand_node(root, game.legal_actions(), model.initial_inference(observation))
             self.add_exploration_noise(root)
             self.run_mcts(root, game.history, model)
@@ -51,13 +51,17 @@ class Muzero:
         return game
 
     def run_mcts(self, root: Node, history: ActionHistory, model: MLP):
+        pass
 
+    def expand_node(self, node: Node, legal_actions: list | tuple, model_output: tuple):
+        value, reward, policy_logits, encoded_state = model_output
 
-    def expand_node(self, node: Node, legal_actions: list | tuple, model_output):
-        node.hidden_state = model_output.encoded_state
-        node.reward = model_output.reward
-        policy = {a: math.exp(model_output.policy_logits[a]) for a in legal_actions}
+        node.hidden_state = encoded_state
+        node.reward = reward
+
+        policy = {a: math.exp(policy_logits[a]) for a in legal_actions}
         policy_sum = sum(policy.values())
+
         for action, p in policy.items():
             node.children[action] = Node(p / policy_sum)
 
@@ -69,8 +73,9 @@ class Muzero:
             node.children[a].prior = node.children[a].prior * (1 - frac) + n * frac
 
     def launch_job(self, fn, *args):
-        p = mp.Process(target=fn, args=args)
-        p.start()
+        fn(*args)
+        # p = mp.Process(target=fn, args=args)
+        # p.start()
 
 
 if __name__ == '__main__':
