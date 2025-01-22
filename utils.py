@@ -1,6 +1,5 @@
 import torch
 
-
 def dict_to_cpu(dictionary):
     cpu_dict = {}
     for key, value in dictionary.items():

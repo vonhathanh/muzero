@@ -9,12 +9,12 @@ class MLP(torch.nn.Module):
 
     def __init__(self, args: Args):
         super().__init__()
+        self.action_space = args.action_space
 
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else
-            "mps" if torch.backends.mps.is_available() else
-            "cpu"
-        )
+        if torch.cuda.is_available() and args.train_on_gpu:
+            self.device = torch.device("cuda")
+        else:
+            self.device = "cpu"
 
         self.representation_net = mlp(np.array(args.observation_shape).prod(),
             [args.hidden_layers_size],
@@ -47,16 +47,10 @@ class MLP(torch.nn.Module):
 
     def dynamics(self, encoded_state, action):
         # Stack encoded_state with a game specific one hot encoded action (See paper appendix Network Architecture)
-        action_one_hot = (
-            torch.zeros((action.shape[0], self.action_space_size))
-            .to(action.device)
-            .float()
-        )
-        action_one_hot.scatter_(1, action.long(), 1.0)
+        action_one_hot = torch.nn.functional.one_hot(torch.tensor([action]).to(self.device), len(self.action_space))
         x = torch.cat((encoded_state, action_one_hot), dim=1)
 
         next_state = self.dynamics_encoded_state_net(x)
-        # TODO verify this step, why reward = net(next_state) not net(current_state)
         reward = self.dynamics_reward_net(next_state)
 
         return self.scale_encoded_state(next_state), reward
