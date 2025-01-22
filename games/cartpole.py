@@ -1,5 +1,7 @@
 import gymnasium as gym
 import torch
+
+from action_history import ActionHistory
 from games.abstract_game import AbstractGame
 
 
@@ -8,9 +10,10 @@ class Game(AbstractGame):
     Game wrapper.
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, action_space, seed=0):
         self.env = gym.make("CartPole-v1")
-        self.seed = 0 if seed is None else seed
+        self.action_space = action_space
+        self.seed = seed
         self.history = []
 
     def step(self, action):
@@ -77,3 +80,6 @@ class Game(AbstractGame):
             1: "Push cart to the right",
         }
         return f"{action_number}. {actions[action_number]}"
+
+    def action_history(self):
+        return ActionHistory(self.history, self.action_space)
