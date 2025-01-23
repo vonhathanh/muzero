@@ -70,14 +70,7 @@ class MLP(torch.nn.Module):
         encoded_state = self.representation(observation)
         policy_logits, value = self.prediction(encoded_state)
         # reward equal to 0 for consistency
-        reward = torch.log(
-            (
-                torch.zeros(1, self.full_support_size)
-                .scatter(1, torch.tensor([[self.full_support_size // 2]]).long(), 1.0)
-                .repeat(len(observation), 1)
-                .to(observation.device)
-            )
-        )
+        reward = torch.zeros((1, self.full_support_size), device=self.device)
         return value, reward, policy_logits, encoded_state
 
     def recurrent_inference(self, encoded_state, action):
