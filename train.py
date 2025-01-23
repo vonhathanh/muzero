@@ -13,6 +13,7 @@ from model import MLP
 from node import Node
 from replay_buffer import ReplayBuffer
 from shared_storage import SharedStorage
+from utils import support_to_scalar
 
 
 class Muzero:
@@ -45,11 +46,20 @@ class Muzero:
             self.expand_node(root, game.legal_actions(), model.initial_inference(observation))
             self.add_exploration_noise(root)
             self.run_mcts(root, game.action_history(), model)
-        #     action = self.select_action(len(game.history), root, model)
+            action = self.select_action(len(game.history), root, model)
         #     observation, done = game.step(action)
         #     game.store_statistics(root)
 
         return game
+
+    def select_action(self, num_moves: int, node: Node, network: MLP):
+        visit_counts = [
+            (child.visit_count, action) for action, child in node.children.items()
+        ]
+        t = self.args.visit_softmax_temperature_fn(
+            num_moves=num_moves, training_steps=network.training_steps())
+        _, action = softmax_sample(visit_counts, t)
+        return action
 
     def run_mcts(self, root: Node, action_history: ActionHistory, model: MLP):
         min_max_stats = MinMaxStats()
@@ -69,10 +79,19 @@ class Muzero:
             parent = search_path[-2]
             network_output = model.recurrent_inference(parent.hidden_state,
                                                          history.last_action())
-            # expand_node(node, history.to_play(), history.action_space(), network_output)
-            #
-            # backpropagate(search_path, network_output.value, history.to_play(),
-            #               config.discount, min_max_stats)
+            value, _, _, _ = network_output
+            value = float(support_to_scalar(value, self.args.support_size))
+            self.expand_node(node, history.action_space, network_output)
+
+            self.backpropagate(search_path, value, min_max_stats)
+
+    def backpropagate(self, search_path:  list[Node], value: float, min_max_stats: MinMaxStats):
+        for node in reversed(search_path):
+            node.value_sum += value
+            node.visit_count += 1
+            min_max_stats.update(node.value())
+
+            value = node.reward + self.args.discount * value
 
     def select_child(self, node: Node, min_max_stats: MinMaxStats):
         _, action, child = max(
@@ -97,7 +116,7 @@ class Muzero:
         value, reward, policy_logits, encoded_state = model_output
 
         node.hidden_state = encoded_state
-        node.reward = reward
+        node.reward = float(support_to_scalar(reward, self.args.support_size))
 
         policy = {a: math.exp(policy_logits[0, a]) for a in legal_actions}
         policy_sum = sum(policy.values())
